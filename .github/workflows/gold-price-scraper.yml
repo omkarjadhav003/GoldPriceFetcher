@@ -1,0 +1,97 @@
+name: Gold Price Scraper
+
+on:
+  schedule:
+    # Runs every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allows manual triggering
+  
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  scrape-gold-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # Prevent long-running jobs
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip
+        
+    - name: Install Chrome
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+    - name: Install ChromeDriver
+      run: |
+        CHROME_VERSION=$(google-chrome --version | cut -d " " -f3 | cut -d "." -f1)
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+        sudo unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
+        
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Create Firebase service account file
+      run: |
+        echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > firebase_service_account.json
+        
+    - name: Run Tanishq scraper for Bangalore
+      run: |
+        python3 main_scraper.py \
+          --jewellers tanishq \
+          --cities Bangalore \
+          --days 30 \
+          --firebase-key firebase_service_account.json \
+          --collection gold_prices
+      continue-on-error: true
+      id: bangalore-scrape
+      
+    - name: Run Tanishq scraper for Madhubani
+      run: |
+        python3 main_scraper.py \
+          --jewellers tanishq \
+          --cities Madhubani \
+          --days 30 \
+          --firebase-key firebase_service_account.json \
+          --collection gold_prices
+      continue-on-error: true
+      id: madhubani-scrape
+      
+    - name: Clean up credentials
+      if: always()
+      run: |
+        rm -f firebase_service_account.json
+        
+    - name: Report results
+      if: always()
+      run: |
+        echo "Scraping Summary:"
+        echo "Bangalore: ${{ steps.bangalore-scrape.outcome }}"
+        echo "Madhubani: ${{ steps.madhubani-scrape.outcome }}"
+        
+        if [[ "${{ steps.bangalore-scrape.outcome }}" == "failure" && "${{ steps.madhubani-scrape.outcome }}" == "failure" ]]; then
+          echo "❌ Both scraping jobs failed"
+          exit 1
+        elif [[ "${{ steps.bangalore-scrape.outcome }}" == "failure" || "${{ steps.madhubani-scrape.outcome }}" == "failure" ]]; then
+          echo "⚠️ One scraping job failed"
+        else
+          echo "✅ All scraping jobs completed successfully"
+        fi 
