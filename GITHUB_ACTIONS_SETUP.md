@@ -2,7 +2,7 @@
 ## Automated Gold Price Scraping Every 30 Minutes
 
 ### Overview
-This setup enables automatic scraping of Tanishq gold prices for Bangalore and Madhubani twice daily (12:00 AM and 12:00 PM UTC) using GitHub Actions.
+This setup enables automatic scraping of Tanishq gold prices for Bangalore and Madhubani once daily at 11:00 AM IST using GitHub Actions.
 
 ### Prerequisites
 - GitHub repository with your scraper code
@@ -47,7 +47,7 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions
 #### 3. Workflow Configuration
 
 The workflow is configured to:
-- **Schedule:** Twice daily at 12:00 AM and 12:00 PM UTC (`0 0,12 * * *`)
+- **Schedule:** Daily at 11:00 AM IST / 5:30 AM UTC (`30 5 * * *`)
 - **Manual Trigger:** Available via "Actions" tab
 - **Timeout:** 15 minutes per job
 - **Cities:** Bangalore, Madhubani
@@ -88,9 +88,10 @@ Check your Firestore `gold_prices` collection for new documents.
 Edit the cron expression in `.github/workflows/gold-price-scraper.yml`:
 ```yaml
 schedule:
-  - cron: '*/15 * * * *'  # Every 15 minutes
+  - cron: '30 5 * * *'    # 11:00 AM IST daily (current)
   - cron: '0 */2 * * *'   # Every 2 hours
-  - cron: '0 9,17 * * *'  # 9 AM and 5 PM daily
+  - cron: '0 9,17 * * *'  # 9 AM and 5 PM UTC daily
+  - cron: '30 3 * * *'    # 9:00 AM IST daily
 ```
 
 #### Add More Cities
@@ -122,10 +123,10 @@ schedule:
 **GitHub Actions Usage:**
 - **Public repos:** 2,000 minutes/month free
 - **Private repos:** Check your plan limits
-- **Estimated usage:** ~5 minutes per run × 2 runs/day = ~300 minutes/month
+- **Estimated usage:** ~5 minutes per run × 1 run/day = ~150 minutes/month
 
 **Recommendations:**
-- Very cost-effective with current schedule (well under free limits)
+- Extremely cost-effective with daily schedule (well under free limits)
 - Monitor usage in Settings → Billing
 - Use `workflow_dispatch` for manual testing
 
@@ -161,8 +162,8 @@ Ensure your service account has Firestore write permissions:
 ### Monitoring Success
 
 Check these indicators:
-1. **GitHub Actions:** Green checkmarks in Actions tab twice daily
-2. **Firestore:** New documents in `gold_prices` collection at 12:00 AM and 12:00 PM UTC
-3. **Android App:** Fresh data availability twice daily
+1. **GitHub Actions:** Green checkmarks in Actions tab daily at 11:00 AM IST
+2. **Firestore:** New documents in `gold_prices` collection daily at 11:00 AM IST
+3. **Android App:** Fresh data availability once daily
 
 Your automated gold price scraping is now ready! 🚀 
