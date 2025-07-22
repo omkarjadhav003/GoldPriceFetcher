@@ -2,8 +2,8 @@ name: Gold Price Scraper
 
 on:
   schedule:
-    # Runs every 30 minutes
-    - cron: '*/30 * * * *'
+    # Runs twice daily at 12:00 AM and 12:00 PM UTC
+    - cron: '0 0,12 * * *'
   workflow_dispatch: # Allows manual triggering
   
 env:
